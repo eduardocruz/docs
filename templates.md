@@ -12,7 +12,7 @@ One method of using templates in Laravel is via controller layouts. By specifyin
 
 #### Defining A Layout On A Controller
 
-	class UserController extends BaseController {
+	class UserController extends Controller {
 
 		/**
 		 * The layout that should be used for responses.
@@ -36,13 +36,13 @@ Blade is a simple, yet powerful templating engine provided with Laravel. Unlike 
 
 #### Defining A Blade Layout
 
-	<!-- Stored in app/views/layouts/master.blade.php -->
+	<!-- Stored in resources/views/layouts/master.blade.php -->
 
 	<html>
 		<body>
 			@section('sidebar')
 				This is the master sidebar.
-			@show
+			@stop
 
 			<div class="container">
 				@yield('content')
@@ -75,19 +75,19 @@ Sometimes, such as when you are not sure if a section has been defined, you may 
 
 #### Echoing Data
 
-	Hello, {{{ $name }}}.
+	Hello, {{ $name }}.
 
-	The current UNIX timestamp is {{{ time() }}}.
+	The current UNIX timestamp is {{ time() }}.
 
 #### Echoing Data After Checking For Existence
 
 Sometimes you may wish to echo a variable, but you aren't sure if the variable has been set. Basically, you want to do this:
 
-	{{{ isset($name) ? $name : 'Default' }}}
+	{{ isset($name) ? $name : 'Default' }}
 
 However, instead of writing a ternary statement, Blade allows you to use the following convenient short-cut:
 
-	{{{ $name or 'Default' }}}
+	{{ $name or 'Default' }}
 
 #### Displaying Raw Text With Curly Braces
 
@@ -97,11 +97,11 @@ If you need to display a string that is wrapped in curly braces, you may escape 
 
 Of course, all user supplied data should be escaped or purified. To escape the output, you may use the triple curly brace syntax:
 
-	Hello, {{{ $name }}}.
+	Hello, {{ $name }}.
 
 If you don't want the data to be escaped, you may use double curly-braces:
 
-	Hello, {{ $name }}.
+	Hello, {!! $name !!}.
 
 > **Note:** Be very careful when echoing content that is supplied by users of your application. Always use the triple curly brace syntax to escape any HTML entities in the content.
 
@@ -129,6 +129,12 @@ If you don't want the data to be escaped, you may use double curly-braces:
 		<p>This is user {{ $user->id }}</p>
 	@endforeach
 
+	@forelse($users as $user)
+	  	<li>{{ $user->name }}</li>
+	@empty
+	  	<p>No users</p>
+	@endforelse
+
 	@while (true)
 		<p>I'm looping forever.</p>
 	@endwhile
@@ -143,7 +149,7 @@ You may also pass an array of data to the included view:
 
 #### Overwriting Sections
 
-By default, sections are appended to any previous content that exists in the section. To overwrite a section entirely, you may use the `overwrite` statement:
+To overwrite a section entirely, you may use the `overwrite` statement:
 
 	@extends('list.item.container')
 
@@ -176,5 +182,5 @@ The following example creates a `@datetime($var)` directive which simply calls `
 	{
 		$pattern = $compiler->createMatcher('datetime');
 
-		return preg_replace($pattern, '$1<?php echo $2->format('m/d/Y H:i'); ?>', $view);
+		return preg_replace($pattern, '$1<?php echo $2->format(\'m/d/Y H:i\'); ?>', $view);
 	});

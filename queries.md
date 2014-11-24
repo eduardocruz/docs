@@ -151,9 +151,9 @@ If you would like to use a "where" style clause on your joins, you may use the `
 <a name="advanced-wheres"></a>
 ## Advanced Wheres
 
-Sometimes you may need to create more advanced where clauses such as "where exists" or nested parameter groupings. The Laravel query builder can handle these as well:
-
 #### Parameter Grouping
+
+Sometimes you may need to create more advanced where clauses such as "where exists" or nested parameter groupings. The Laravel query builder can handle these as well:
 
 	DB::table('users')
 	            ->where('name', '=', 'John')
@@ -216,20 +216,6 @@ Sometimes you may need to use a raw expression in a query. These expressions wil
 	                     ->groupBy('status')
 	                     ->get();
 
-#### Incrementing or decrementing a value of a column
-
-	DB::table('users')->increment('votes');
-
-	DB::table('users')->increment('votes', 5);
-
-	DB::table('users')->decrement('votes');
-
-	DB::table('users')->decrement('votes', 5);
-
-You may also specify additional columns to update:
-
-	DB::table('users')->increment('votes', 1, array('name' => 'John'));
-
 <a name="inserts"></a>
 ## Inserts
 
@@ -239,9 +225,9 @@ You may also specify additional columns to update:
 		array('email' => 'john@example.com', 'votes' => 0)
 	);
 
-If the table has an auto-incrementing id, use `insertGetId` to insert a record and retrieve the id:
-
 #### Inserting Records Into A Table With An Auto-Incrementing ID
+
+If the table has an auto-incrementing id, use `insertGetId` to insert a record and retrieve the id:
 
 	$id = DB::table('users')->insertGetId(
 		array('email' => 'john@example.com', 'votes' => 0)
@@ -265,6 +251,20 @@ If the table has an auto-incrementing id, use `insertGetId` to insert a record a
 	            ->where('id', 1)
 	            ->update(array('votes' => 1));
 
+#### Incrementing or decrementing a value of a column
+
+	DB::table('users')->increment('votes');
+
+	DB::table('users')->increment('votes', 5);
+
+	DB::table('users')->decrement('votes');
+
+	DB::table('users')->decrement('votes', 5);
+
+You may also specify additional columns to update:
+
+	DB::table('users')->increment('votes', 1, array('name' => 'John'));
+
 <a name="deletes"></a>
 ## Deletes
 
@@ -284,8 +284,6 @@ If the table has an auto-incrementing id, use `insertGetId` to insert a record a
 ## Unions
 
 The query builder also provides a quick way to "union" two queries together:
-
-#### Performing A Query Union
 
 	$first = DB::table('users')->whereNull('first_name');
 
@@ -310,8 +308,6 @@ To "lock for update" on a SELECT statement, you may use the `lockForUpdate` meth
 ## Caching Queries
 
 You may easily cache the results of a query using the `remember` method:
-
-#### Caching A Query Result
 
 	$users = DB::table('users')->remember(10)->get();
 

@@ -9,7 +9,7 @@
 <a name="configuration"></a>
 ## Configuration
 
-In other frameworks, pagination can be very painful. Laravel makes it a breeze. There is a single configuration option in the `app/config/view.php` file. The `pagination` option specifies which view should be used to create pagination links. By default, Laravel includes two views.
+In other frameworks, pagination can be very painful. Laravel makes it a breeze. There is a single configuration option in the `config/view.php` file. The `pagination` option specifies which view should be used to create pagination links. By default, Laravel includes two views.
 
 The `pagination::slider` view will show an intelligent "range" of links based on the current page, while the `pagination::simple` view will simply show "previous" and "next" buttons. **Both views are compatible with Twitter Bootstrap out of the box.**
 
@@ -22,9 +22,11 @@ There are several ways to paginate items. The simplest is by using the `paginate
 
 	$users = DB::table('users')->paginate(15);
 
-You may also paginate [Eloquent](/docs/eloquent) models:
+> **Note:** Currently, pagination operations that use a `groupBy` statement cannot be executed efficiently by Laravel. If you need to use a `groupBy` with a paginated result set, it is recommended that you query the database manually and use `Paginator::make`.
 
 #### Paginating An Eloquent Model
+
+You may also paginate [Eloquent](/docs/eloquent) models:
 
 	$allUsers = User::paginate(15);
 
@@ -56,9 +58,16 @@ You may also access additional pagination information via the following methods:
 - `getTo`
 - `count`
 
-Sometimes you may wish to create a pagination instance manually, passing it an array of items. You may do so using the `Paginator::make` method:
+
+#### "Simple Pagination"
+
+If you are only showing "Next" and "Previous" links in your pagination view, you have the option of using the `simplePaginate` method to perform a more efficient query. This is useful for larger datasets when you do not require the display of exact page numbers on your view:
+
+	$someUsers = User::where('votes', '>', 100)->simplePaginate(15);
 
 #### Creating A Paginator Manually
+
+Sometimes you may wish to create a pagination instance manually, passing it an array of items. You may do so using the `Paginator::make` method:
 
 	$paginator = Paginator::make($items, $totalItems, $perPage);
 
@@ -94,7 +103,7 @@ This method call will generate URLs that look something like this:
 <a name="converting-to-json"></a>
 ## Converting To JSON
 
-The `Paginator` class implements the `Illuminate\Support\Contracts\JsonableInterface` contract and exposes the `toJson` method. You can may also convert a `Paginator` instance to JSON by returning it from a route. The JSON'd form of the instance will include some "meta" information such as `total`, `current_page`, `last_page`, `from`, and `to`. The instance's data will be available via the `data` key in the JSON array.
+The `Paginator` class implements the `Illuminate\Support\Contracts\JsonableInterface` contract and exposes the `toJson` method. You may also convert a `Paginator` instance to JSON by returning it from a route. The JSON'd form of the instance will include some "meta" information such as `total`, `current_page`, `last_page`, `from`, and `to`. The instance's data will be available via the `data` key in the JSON array.
 
 <a name="custom-presenters"></a>
 ## Custom Presenters
@@ -109,15 +118,15 @@ Extend the `Illuminate\Pagination\Presenter` class and implement its abstract me
 
         public function getActivePageWrapper($text)
         {
-            return '<li class="current">'.$text.'</li>';
+            return '<li class="current"><a href="">'.$text.'</a></li>';
         }
 
         public function getDisabledTextWrapper($text)
         {
-            return '<li class="unavailable">'.$text.'</li>';
+            return '<li class="unavailable"><a href="">'.$text.'</a></li>';
         }
 
-        public function getPageLinkWrapper($url, $page)
+        public function getPageLinkWrapper($url, $page, $rel = null)
         {
             return '<li><a href="'.$url.'">'.$page.'</a></li>';
         }
@@ -126,7 +135,7 @@ Extend the `Illuminate\Pagination\Presenter` class and implement its abstract me
 
 ### Using The Custom Presenter
 
-First, create a view in your `app/views` directory that will server as your custom presenter. Then, replace `pagination` option in the `app/config/view.php` configuration file with the new view's name. Finally, the following code would be placed in your custom presenter view:
+First, create a view in your `resources/views` directory that will server as your custom presenter. Then, replace `pagination` option in the `config/view.php` configuration file with the new view's name. Finally, the following code would be placed in your custom presenter view:
 
     <ul class="pagination">
         <?php echo with(new ZurbPresenter($paginator))->render(); ?>

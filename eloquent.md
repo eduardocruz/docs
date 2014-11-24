@@ -7,6 +7,7 @@
 - [Soft Deleting](#soft-deleting)
 - [Timestamps](#timestamps)
 - [Query Scopes](#query-scopes)
+- [Global Scopes](#global-scopes)
 - [Relationships](#relationships)
 - [Querying Relations](#querying-relations)
 - [Eager Loading](#eager-loading)
@@ -25,12 +26,12 @@
 
 The Eloquent ORM included with Laravel provides a beautiful, simple ActiveRecord implementation for working with your database. Each database table has a corresponding "Model" which is used to interact with that table.
 
-Before getting started, be sure to configure a database connection in `app/config/database.php`.
+Before getting started, be sure to configure a database connection in `config/database.php`.
 
 <a name="basic-usage"></a>
 ## Basic Usage
 
-To get started, create an Eloquent model. Models typically live in the `app/models` directory, but you are free to place them anywhere that can be auto-loaded according to your `composer.json` file.
+To get started, create an Eloquent model. Models typically live in the `app` directory, but you are free to place them anywhere that can be auto-loaded according to your `composer.json` file.
 
 #### Defining An Eloquent Model
 
@@ -144,6 +145,8 @@ The inverse of `fillable` is `guarded`, and serves as a "black-list" instead of 
 		protected $guarded = array('id', 'password');
 
 	}
+
+> **Note:** When using `guarded`, you should still never pass `Input::get()` or any raw array of user controlled input into a `save` or `update` method, as any column that is not guarded may be updated.
 
 #### Blocking All Attributes From Mass Assignment
 
@@ -371,6 +374,70 @@ Then pass the parameter into the scope call:
 
 	$users = User::ofType('member')->get();
 
+<a name="global-scopes"></a>
+## Global Scopes
+
+Sometimes you may wish to define a scope that applies to all queries performed on a model. In essence, this is how Eloquent's own "soft delete" feature works. Global scopes are defined using a combination of PHP traits and an implementation of `Illuminate\Database\Eloquent\ScopeInterface`.
+
+First, let's define a trait. For this example, we'll use the `SoftDeletingTrait` that ships with Laravel:
+
+	trait SoftDeletingTrait {
+
+		/**
+		 * Boot the soft deleting trait for a model.
+		 *
+		 * @return void
+		 */
+		public static function bootSoftDeletingTrait()
+		{
+			static::addGlobalScope(new SoftDeletingScope);
+		}
+
+	}
+
+If an Eloquent model uses a trait that has a method matching the `bootNameOfTrait` naming convention, that trait method will be called when the Eloquent model is booted, giving you an opportunity to register a global scope, or do anything else you want. A scope must implement `ScopeInterface`, which specifies two methods: `apply` and `remove`.
+
+The `apply` method receives an `Illuminate\Database\Eloquent\Builder` query builder object, and is responsible for adding any additional `where` clauses that the scope wishes to add. The `remove` method also receives a `Builder` object and is responsible for reversing the action taken by `apply`. In other words, `remove` should remove the `where` clause (or any other clause) that was added. So, for our `SoftDeletingScope`, the methods look something like this:
+
+	/**
+	 * Apply the scope to a given Eloquent query builder.
+	 *
+	 * @param  \Illuminate\Database\Eloquent\Builder  $builder
+	 * @return void
+	 */
+	public function apply(Builder $builder)
+	{
+		$model = $builder->getModel();
+
+		$builder->whereNull($model->getQualifiedDeletedAtColumn());
+	}
+
+	/**
+	 * Remove the scope from the given Eloquent query builder.
+	 *
+	 * @param  \Illuminate\Database\Eloquent\Builder  $builder
+	 * @return void
+	 */
+	public function remove(Builder $builder)
+	{
+		$column = $builder->getModel()->getQualifiedDeletedAtColumn();
+
+		$query = $builder->getQuery();
+
+		foreach ((array) $query->wheres as $key => $where)
+		{
+			// If the where clause is a soft delete date constraint, we will remove it from
+			// the query and reset the keys on the wheres. This allows this developer to
+			// include deleted model in a relationship result set that is lazy loaded.
+			if ($this->isSoftDeleteConstraint($where, $column))
+			{
+				unset($query->wheres[$key]);
+
+				$query->wheres = array_values($query->wheres);
+			}
+		}
+	}
+
 <a name="relationships"></a>
 ## Relationships
 
@@ -533,7 +600,7 @@ Of course, you may also define the inverse of the relationship on the `Role` mod
 <a name="has-many-through"></a>
 ### Has Many Through
 
-The "has many through" relation provides a convenient short-cut for accessing distant relations via an intermediate relation. For example, a `Country` model might have many `Posts` through a `Users` model. The tables for this relationship would look like this:
+The "has many through" relation provides a convenient short-cut for accessing distant relations via an intermediate relation. For example, a `Country` model might have many `Post` through a `User` model. The tables for this relationship would look like this:
 
 	countries
 		id - integer
@@ -833,6 +900,18 @@ You will often need to insert new related models. For example, you may wish to i
 
 In this example, the `post_id` field will automatically be set on the inserted comment.
 
+If you need to save multiple related models:
+
+	$comments = array(
+		new Comment(array('message' => 'A new comment.')),
+		new Comment(array('message' => 'Another comment.')),
+		new Comment(array('message' => 'The latest comment.'))
+	);
+
+	$post = Post::find(1);
+
+	$post->comments()->saveMany($comments);
+
 ### Associating Models (Belongs To)
 
 When updating a `belongsTo` relationship, you may use the `associate` method. This method will set the foreign key on the child model:
@@ -860,6 +939,14 @@ You may also pass an array of attributes that should be stored on the pivot tabl
 Of course, the opposite of `attach` is `detach`:
 
 	$user->roles()->detach(1);
+
+Both `attach` and `detach` also take arrays of IDs as input:
+
+	$user = User::find(1);
+
+	$user->roles()->detach([1, 2, 3]);
+
+	$user->roles()->attach([1 => ['attribute1' => 'value1'], 2, 3]);
 
 #### Using Sync To Attach Many To Many Models
 
@@ -938,6 +1025,12 @@ To delete all records on the pivot table for a model, you may use the `detach` m
 	User::find(1)->roles()->detach();
 
 Note that this operation does not delete records from the `roles` table, but only from the pivot table.
+
+#### Updating A Record On A Pivot Table
+
+Sometimes you may need to update your pivot table, but not detach it. If you wish to update your pivot table in place you may use `updateExistingPivot` method like so:
+
+	User::find(1)->roles()->updateExistingPivot($roleId, $attributes);
 
 #### Defining A Custom Pivot Model
 
@@ -1061,7 +1154,7 @@ Mutators are declared in a similar fashion:
 <a name="date-mutators"></a>
 ## Date Mutators
 
-By default, Eloquent will convert the `created_at`, `updated_at`, and `deleted_at` columns to instances of [Carbon](https://github.com/briannesbitt/Carbon), which provides an assortment of helpful methods, and extends the native PHP `DateTime` class.
+By default, Eloquent will convert the `created_at` and `updated_at` columns to instances of [Carbon](https://github.com/briannesbitt/Carbon), which provides an assortment of helpful methods, and extends the native PHP `DateTime` class.
 
 You may customize which fields are automatically mutated, and even completely disable this mutation, by overriding the `getDates` method of the model:
 
@@ -1193,4 +1286,4 @@ Once you have created the accessor, just add the value to the `appends` property
 
 	protected $appends = array('is_admin');
 
-Once the attribute has been added to the `appends` list, it will be included in both the model's array and JSON forms.
+Once the attribute has been added to the `appends` list, it will be included in both the model's array and JSON forms. Attributes in the `appends` array respect the `visible` and `hidden` configuration on the model.

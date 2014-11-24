@@ -1,4 +1,4 @@
-# Unit Testing
+# Testing
 
 - [Introduction](#introduction)
 - [Defining & Running Tests](#defining-and-running-tests)
@@ -14,12 +14,12 @@
 
 Laravel is built with unit testing in mind. In fact, support for testing with PHPUnit is included out of the box, and a `phpunit.xml` file is already setup for your application. In addition to PHPUnit, Laravel also utilizes the Symfony HttpKernel, DomCrawler, and BrowserKit components to allow you to inspect and manipulate your views while testing, allowing to simulate a web browser.
 
-An example test file is provided in the `app/tests` directory. After installing a new Laravel application, simply run `phpunit` on the command line to run your tests.
+An example test file is provided in the `tests` directory. After installing a new Laravel application, simply run `phpunit` on the command line to run your tests.
 
 <a name="defining-and-running-tests"></a>
 ## Defining & Running Tests
 
-To create a test case, simply create a new test file in the `app/tests` directory. The test class should extend `TestCase`. You may then define test methods as you normally would when using PHPUnit.
+To create a test case, simply create a new test file in the `tests` directory. The test class should extend `TestCase`. You may then define test methods as you normally would when using PHPUnit.
 
 #### An Example Test Class
 
@@ -44,9 +44,9 @@ When running unit tests, Laravel will automatically set the configuration enviro
 <a name="calling-routes-from-tests"></a>
 ## Calling Routes From Tests
 
-You may easily call one of your routes for a test using the `call` method:
-
 #### Calling A Route From A Test
+
+You may easily call one of your routes for a test using the `call` method:
 
 	$response = $this->call('GET', 'user/profile');
 
@@ -56,13 +56,15 @@ You may then inspect the `Illuminate\Http\Response` object:
 
 	$this->assertEquals('Hello World', $response->getContent());
 
-You may also call a controller from a test:
-
 #### Calling A Controller From A Test
+
+You may also call a controller from a test:
 
 	$response = $this->action('GET', 'HomeController@index');
 
 	$response = $this->action('GET', 'UserController@profile', array('user' => 1));
+
+> **Note:** You do not need to specify the full controller namespace when using the `action` method. Only specify the portion of the class name that follows the `App\Http\Controllers` namespace.
 
 The `getContent` method will return the evaluated string contents of the response. If your route returns a `View`, you may access it using the `original` property:
 

@@ -22,9 +22,9 @@ Laravel ships with a simple, convenient facility for validating data and retriev
 
 The first argument passed to the `make` method is the data under validation. The second argument is the validation rules that should be applied to the data.
 
-Multiple rules may be delimited using either a "pipe" character, or as separate elements of an array.
-
 #### Using Arrays To Specify Rules
+
+Multiple rules may be delimited using either a "pipe" character, or as separate elements of an array.
 
 	$validator = Validator::make(
 		array('name' => 'Dayle'),
@@ -138,6 +138,16 @@ So, after redirection, you may utilize the automatically bound `$errors` variabl
 
 	<?php echo $errors->first('email'); ?>
 
+### Named Error Bags
+
+If you have multiple forms on a single page, you may wish to name the `MessageBag` of errors. This will allow you to retrieve the error messages for a specific form. Simply pass a name as the second argument to `withErrors`:
+
+	return Redirect::to('register')->withErrors($validator, 'login');
+
+You may then access the named `MessageBag` instance from the `$errors` variable:
+
+	<?php echo $errors->login->first('email'); ?>
+
 <a name="available-validation-rules"></a>
 ## Available Validation Rules
 
@@ -152,6 +162,7 @@ Below is a list of all available validation rules and their function:
 - [Array](#rule-array)
 - [Before (Date)](#rule-before)
 - [Between](#rule-between)
+- [Boolean](#rule-boolean)
 - [Confirmed](#rule-confirmed)
 - [Date](#rule-date)
 - [Date Format](#rule-date-format)
@@ -178,6 +189,7 @@ Below is a list of all available validation rules and their function:
 - [Required Without All](#rule-required-without-all)
 - [Same](#rule-same)
 - [Size](#rule-size)
+- [Timezone](#rule-timezone)
 - [Unique (Database)](#rule-unique)
 - [URL](#rule-url)
 
@@ -225,6 +237,11 @@ The field under validation must be a value preceding the given date. The dates w
 #### between:_min_,_max_
 
 The field under validation must have a size between the given _min_ and _max_. Strings, numerics, and files are evaluated in the same fashion as the `size` rule.
+
+<a name="rule-boolean"></a>
+#### boolean
+
+The field under validation must be able to be cast as a boolean. Accepted input are `true`, `false`, `1`, `0`, `"1"` and `"0"`.
 
 <a name="rule-confirmed"></a>
 #### confirmed
@@ -285,7 +302,7 @@ Passing `NULL` as a "where" clause value will add a check for a `NULL` database 
 <a name="rule-image"></a>
 #### image
 
-The file under validation must be an image (jpeg, png, bmp, or gif)
+The file under validation must be an image (jpeg, png, bmp, gif, or svg)
 
 <a name="rule-in"></a>
 #### in:_foo_,_bar_,...
@@ -344,9 +361,9 @@ The field under validation must match the given regular expression.
 The field under validation must be present in the input data.
 
 <a name="rule-required-if"></a>
-#### required\_if:_field_,_value_
+#### required_if:_field_,_value_,...
 
-The field under validation must be present if the _field_ field is equal to _value_.
+The field under validation must be present if the _field_ field is equal to any _value_.
 
 <a name="rule-required-with"></a>
 #### required_with:_foo_,_bar_,...
@@ -377,6 +394,11 @@ The given _field_ must match the field under validation.
 #### size:_value_
 
 The field under validation must have a size matching the given _value_. For string data, _value_ corresponds to the number of characters. For numeric data, _value_ corresponds to a given integer value. For files, _size_ corresponds to the file size in kilobytes.
+
+<a name="rule-timezone"></a>
+#### timezone
+
+The field under validation must be a valid timezone identifier according to the `timezone_identifiers_list` PHP function.
 
 <a name="rule-unique"></a>
 #### unique:_table_,_column_,_except_,_idColumn_
@@ -459,7 +481,7 @@ If needed, you may use custom error messages for validation instead of the defau
 
 	$validator = Validator::make($input, $rules, $messages);
 
-*Note:* The `:attribute` place-holder will be replaced by the actual name of the field under validation. You may also utilize other place-holders in validation messages.
+> *Note:* The `:attribute` place-holder will be replaced by the actual name of the field under validation. You may also utilize other place-holders in validation messages.
 
 #### Other Validation Place-Holders
 
@@ -470,18 +492,18 @@ If needed, you may use custom error messages for validation instead of the defau
 		'in'      => 'The :attribute must be one of the following types: :values',
 	);
 
-Sometimes you may wish to specify a custom error messages only for a specific field:
-
 #### Specifying A Custom Message For A Given Attribute
+
+Sometimes you may wish to specify a custom error messages only for a specific field:
 
 	$messages = array(
 		'email.required' => 'We need to know your e-mail address!',
 	);
 
-In some cases, you may wish to specify your custom messages in a language file instead of passing them directly to the `Validator`. To do so, add your messages to `custom` array in the `app/lang/xx/validation.php` language file.
-
 <a name="localization"></a>
 #### Specifying Custom Messages In Language Files
+
+In some cases, you may wish to specify your custom messages in a language file instead of passing them directly to the `Validator`. To do so, add your messages to `custom` array in the `resources/lang/xx/validation.php` language file.
 
 	'custom' => array(
 		'email' => array(
@@ -492,9 +514,9 @@ In some cases, you may wish to specify your custom messages in a language file i
 <a name="custom-validation-rules"></a>
 ## Custom Validation Rules
 
-Laravel provides a variety of helpful validation rules; however, you may wish to specify some of your own. One method of registering custom validation rules is using the `Validator::extend` method:
-
 #### Registering A Custom Validation Rule
+
+Laravel provides a variety of helpful validation rules; however, you may wish to specify some of your own. One method of registering custom validation rules is using the `Validator::extend` method:
 
 	Validator::extend('foo', function($attribute, $value, $parameters)
 	{
@@ -509,9 +531,9 @@ You may also pass a class and method to the `extend` method instead of a Closure
 
 Note that you will also need to define an error message for your custom rules. You can do so either using an inline custom message array or by adding an entry in the validation language file.
 
-Instead of using Closure callbacks to extend the Validator, you may also extend the Validator class itself. To do so, write a Validator class that extends `Illuminate\Validation\Validator`. You may add validation methods to the class by prefixing them with `validate`:
-
 #### Extending The Validator Class
+
+Instead of using Closure callbacks to extend the Validator, you may also extend the Validator class itself. To do so, write a Validator class that extends `Illuminate\Validation\Validator`. You may add validation methods to the class by prefixing them with `validate`:
 
 	<?php
 
@@ -524,9 +546,9 @@ Instead of using Closure callbacks to extend the Validator, you may also extend 
 
 	}
 
-Next, you need to register your custom Validator extension:
-
 #### Registering A Custom Validator Resolver
+
+Next, you need to register your custom Validator extension:
 
 	Validator::resolver(function($translator, $data, $rules, $messages)
 	{

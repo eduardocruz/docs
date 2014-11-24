@@ -24,17 +24,17 @@ The Laravel `Event` class provides a simple observer implementation, allowing yo
 
 	$event = Event::fire('auth.login', array($user));
 
-You may also specify a priority when subscribing to events. Listeners with higher priority will be run first, while listeners that have the same priority will be run in order of subscription.
-
 #### Subscribing To Events With Priority
+
+You may also specify a priority when subscribing to events. Listeners with higher priority will be run first, while listeners that have the same priority will be run in order of subscription.
 
 	Event::listen('auth.login', 'LoginHandler', 10);
 
 	Event::listen('auth.login', 'OtherHandler', 5);
 
-Sometimes, you may wish to stop the propagation of an event to other listeners. You may do so using by returning `false` from your listener:
-
 #### Stopping The Propagation Of An Event
+
+Sometimes, you may wish to stop the propagation of an event to other listeners. You may do so using by returning `false` from your listener:
 
 	Event::listen('auth.login', function($event)
 	{
@@ -45,16 +45,16 @@ Sometimes, you may wish to stop the propagation of an event to other listeners. 
 
 ### Where To Register Events
 
-So, you know how to register events, but you may be wondering _where_ to register them. Don't worry, this is a common question. Unfortunately, it's a hard question to answer because you can register an event almost anywhere! But, here are some tips. Again, like most other bootstrapping code, you may register events in one of your `start` files such as `app/start/global.php`.
+So, you know how to register events, but you may be wondering _where_ to register them. Don't worry, this is a common question. Unfortunately, it's a hard question to answer because you can register an event almost anywhere! But, here are some tips. Again, like most other bootstrapping code, you may register events in one of your service providers such as `app/Providers/AppServiceProvider.php`.
 
-If your `start` files are getting too crowded, you could create a separate `app/events.php` file that is included from a `start` file. This is a simple solution that keeps your event registration cleanly separated from the rest of your bootstrapping. If you prefer a class based approach, you may register your events in a [service provider](/docs/ioc#service-providers). Since none of these approaches is inherently "correct", choose an approach you feel comfortable with based on the size of your application.
+If your `AppServiceProvider` is getting too crowded, you could create a separate service provider strictly for events. The `provider:make` Artisan command will allow you to quickly generate new service provider classes.
 
 <a name="wildcard-listeners"></a>
 ## Wildcard Listeners
 
-When registering an event listener, you may use asterisks to specify wildcard listeners:
-
 #### Registering Wildcard Event Listeners
+
+When registering an event listener, you may use asterisks to specify wildcard listeners:
 
 	Event::listen('foo.*', function($param)
 	{
@@ -80,11 +80,13 @@ In some cases, you may wish to use a class to handle an event rather than a Clos
 
 #### Registering A Class Listener
 
-	Event::listen('auth.login', 'LoginHandler');
+	Event::listen('event.name', 'App\LoginHandler');
+
+#### Defining An Event Listener Class
 
 By default, the `handle` method on the `LoginHandler` class will be called:
 
-#### Defining An Event Listener Class
+	<?php namespace App;
 
 	class LoginHandler {
 
@@ -95,38 +97,33 @@ By default, the `handle` method on the `LoginHandler` class will be called:
 
 	}
 
-If you do not wish to use the default `handle` method, you may specify the method that should be subscribed:
+Of course, you may place your event handler classes anywhere you wish within your application. For instance, you may wish to create an `App\Events` namespace for all of your event handlers.
 
 #### Specifying Which Method To Subscribe
 
-	Event::listen('auth.login', 'LoginHandler@onLogin');
+If you do not wish to use the default `handle` method, you may specify the method that should be subscribed:
+
+	Event::listen('auth.login', 'App\LoginHandler@onLogin');
 
 <a name="queued-events"></a>
 ## Queued Events
 
-Using the `queue` and `flush` methods, you may "queue" an event for firing, but not fire it immediately:
-
 #### Registering A Queued Event
+
+Using the `queue` and `flush` methods, you may "queue" an event for firing, but not fire it immediately:
 
 	Event::queue('foo', array($user));
 
-#### Registering An Event Flusher
-
-	Event::flusher('foo', function($user)
-	{
-		//
-	});
-
-Finally, you may run the "flusher" and flush all queued events using the `flush` method:
+You may run the "flusher" and flush all queued events using the `flush` method:
 
 	Event::flush('foo');
 
 <a name="event-subscribers"></a>
 ## Event Subscribers
 
-Event subscribers are classes that may subscribe to multiple events from within the class itself. Subscribers should define a `subscribe` method, which will be passed an event dispatcher instance:
-
 #### Defining An Event Subscriber
+
+Event subscribers are classes that may subscribe to multiple events from within the class itself. Subscribers should define a `subscribe` method, which will be passed an event dispatcher instance:
 
 	class UserEventHandler {
 
@@ -161,10 +158,15 @@ Event subscribers are classes that may subscribe to multiple events from within 
 
 	}
 
-Once the subscriber has been defined, it may be registered with the `Event` class.
-
 #### Registering An Event Subscriber
+
+Once the subscriber has been defined, it may be registered with the `Event` class.
 
 	$subscriber = new UserEventHandler;
 
 	Event::subscribe($subscriber);
+
+You may also use the [Laravel IoC container](/docs/ioc) to resolve your subscriber. To do so, simply pass the name of your subscriber to the `subscribe` method:
+
+	Event::subscribe('UserEventHandler');
+

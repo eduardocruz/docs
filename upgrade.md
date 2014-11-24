@@ -1,8 +1,62 @@
 # Upgrade Guide
 
+- [Upgrading To 5.0 From 4.2](#upgrade-5.0)
 - [Upgrading To 4.2 From 4.1](#upgrade-4.2)
+- [Upgrading To 4.1.29 From <= 4.1.x](#upgrade-4.1.29)
 - [Upgrading To 4.1.26 From <= 4.1.25](#upgrade-4.1.26)
 - [Upgrading To 4.1 From 4.0](#upgrade-4.1)
+
+<a name="upgrade-5.0"></a>
+## Upgrading To 5.0 From 4.2
+
+### Quick Upgrade Using LegacyServiceProvider
+
+Laravel 5.0 introduces a robust new folder structure. However, if you wish to upgrade your application to Laravel 5.0 while maintaining the Laravel 4.2 folder structure, you may use the `Illuminate\Foundation\Providers\LegacyStructureServiceProvider`. To upgrade to Laravel 5.0 using this provider, you should do the following:
+
+**1.** Update your `composer.json` dependency on `laravel/framework` to `5.0.*`.
+
+**2.** Run `composer update --no-scripts`.
+
+**3.** Add the `Illuminate\Foundation\Providers\LegacyStructureServiceProvider` to your `providers` array in `app/config/app.php` file.
+
+**4.** Remove the `Illuminate\Session\CommandsServiceProvider`, `Illuminate\Routing\ControllerServiceProvider`, and `Illuminate\Workbench\WorkbenchServiceProvider` entries from your `providers` array in the `app/config/app.php` file.
+
+**5.** Add the following set of paths to the bottom of your `bootstrap/paths.php` file:
+
+	'commands' => __DIR__.'/../app/commands',
+	'config' => __DIR__.'/../app/config',
+	'controllers' => __DIR__.'/../app/controllers',
+	'database' => __DIR__.'/../app/database',
+	'filters' => __DIR__.'/../app/filters',
+	'lang' => __DIR__.'/../app/lang',
+	'providers' => __DIR__.'/../app/providers',
+	'requests' => __DIR__.'/../app/requests',
+
+Once these changes have been made, you should be able to run your Laravel application like normal. However, you should continue reviewing the following upgrade notices.
+
+### Compile Configuration File
+
+The `app/config/compile.php` configuration file should now follow the following format:
+
+	<?php
+
+	return [
+
+		'files' => [
+			//
+		],
+
+		'providers' => [
+			//
+		],
+
+	];
+
+The new `providers` option allows you to list service providers which return arrays of files from their `compiles` method.
+
+### Beanstalk Queuing
+
+Laravel 5.0 now requires `"pda/pheanstalk": "~3.0"` instead of `"pda/pheanstalk": "~2.1"` that Laravel 4.2 required.
 
 <a name="upgrade-4.2"></a>
 ## Upgrading To 4.2 From 4.1
@@ -11,9 +65,19 @@
 
 Laravel 4.2 requires PHP 5.4.0 or greater.
 
+### Encryption Defaults
+
+Add a new `cipher` option in your `app/config/app.php` configuration file. The value of this option should be `MCRYPT_RIJNDAEL_256`.
+
+	'cipher' => MCRYPT_RIJNDAEL_256
+
+This setting may be used to control the default cipher used by the Laravel encryption facilities.
+
+> **Note:** In Laravel 4.2, the default cipher is `MCRYPT_RIJNDAEL_128` (AES), which is considered to be the most secure cipher. Changing the cipher back to `MCRYPT_RIJNDAEL_256` is required to decrypt cookies/values that were encrypted in Laravel <= 4.1
+
 ### Soft Deleting Models Now Use Traits
 
-If you are using soft deleting models, the `softDeletes` property has been removed. You should now use the `SoftDeletingTrait` like so:
+If you are using soft deleting models, the `softDeletes` property has been removed. You must now use the `SoftDeletingTrait` like so:
 
 	use Illuminate\Database\Eloquent\SoftDeletingTrait;
 
@@ -21,7 +85,7 @@ If you are using soft deleting models, the `softDeletes` property has been remov
 		use SoftDeletingTrait;
 	}
 
-You should also manually add the `deleted_at` column to your `dates` property:
+You must also manually add the `deleted_at` column to your `dates` property:
 
 	class User extends Eloquent {
 		use SoftDeletingTrait;
@@ -31,17 +95,30 @@ You should also manually add the `deleted_at` column to your `dates` property:
 
 The API for all soft delete operations remains the same.
 
+> **Note:** The `SoftDeletingTrait` can not be applied on a base model. It must be used on an actual model class.
+
 ### View / Pagination Environment Renamed
 
 If you are directly referencing the `Illuminate\View\Environment` class or `Illuminate\Pagination\Environment` class, update your code to reference `Illuminate\View\Factory` and `Illuminate\Pagination\Factory` instead. These two classes have been renamed to better reflect their function.
 
 ### Additional Parameter On Pagination Presenter
 
-On the `Illuminate\Pagination\Presenter` class, the abstract method `getPageLinkWrapper` signature has changed to add the `rel` argument:
+If you are extending the `Illuminate\Pagination\Presenter` class, the abstract method `getPageLinkWrapper` signature has changed to add the `rel` argument:
 
-```
-abstract public function getPageLinkWrapper($url, $page, $rel = null);
-```
+	abstract public function getPageLinkWrapper($url, $page, $rel = null);
+
+### Iron.Io Queue Encryption
+
+If you are using the Iron.io queue driver, you will need to add a new `encrypt` option to your queue configuration file:
+
+    'encrypt' => true
+
+<a name="upgrade-4.1.29"></a>
+## Upgrading To 4.1.29 From <= 4.1.x
+
+Laravel 4.1.29 improves the column quoting for all database drivers. This protects your application from some mass assignment vulnerabilities when **not** using the `fillable` property on models. If you are using the `fillable` property on your models to protect against mass assignment, your application is not vulnerable. However, if you are using `guarded` and are passing a user controlled array into an "update" or "save" type function, you should upgrade to `4.1.29` immediately as your application may be at risk of mass assignment.
+
+To upgrade to Laravel 4.1.29, simply `composer update`. No breaking changes are introduced in this release.
 
 <a name="upgrade-4.1.26"></a>
 ## Upgrading To 4.1.26 From <= 4.1.25
@@ -124,7 +201,7 @@ Update your `app/lang/en/reminders.php` language file to match [this updated fil
 
 ### Environment Detection Updates
 
-For security reasons, URL domains may no longer be used to detect your application environment. These values are easily spoofable and allow attackers to modify the environment for a request. You should convert your environment detection to use machine host names (`hostname` command on Mac & Ubuntu).
+For security reasons, URL domains may no longer be used to detect your application environment. These values are easily spoofable and allow attackers to modify the environment for a request. You should convert your environment detection to use machine host names (`hostname` command on Mac, Linux, and Windows).
 
 ### Simpler Log Files
 
